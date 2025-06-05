@@ -13,7 +13,7 @@ class Game
     @word = options["@word"] || select_word
     @redacted = options["@redacted"] || redact_word
     @wrong_guesses = options["@wrong_guesses"] || []
-    @all_guesses = options["@all_guesses"] || []
+    @possible_guesses = options["@possible_guesses"] || Array("A".."Z")
   end
 
   def play
@@ -21,32 +21,28 @@ class Game
     loop do
       input_guess
       update_display(@redacted, @wrong_guesses)
-      conclusion
+      conclusion if gameover?
     end
   end
 
   def input_guess
     choose_letter
     letter = gets.chomp.upcase
-    validate_input(letter) unless letter == "SS"
-
-    save_state
+    if letter == "SS"
+      save_state
+    else
+      validate_input(letter)
+    end
   end
 
   def validate_input(letter)
-    if letter_valid?(letter)
-      @all_guesses << letter
+    if @possible_guesses.include?(letter)
+      @possible_guesses.delete(letter)
       check_guess(letter)
     else
       invalid_input
       input_guess
     end
-  end
-
-  def letter_valid?(letter)
-    letter.between?("A", "Z") &&
-      !@all_guesses.include?(letter) &&
-      letter.size == 1
   end
 
   def check_guess(letter)
@@ -59,8 +55,6 @@ class Game
   end
 
   def conclusion
-    return unless gameover?
-
     end_game
     replay
   end
@@ -90,9 +84,7 @@ class Game
   end
 
   def redact_word
-    word = @word.split.join
-    redacted = "_" * word.length
-    redacted.chars.join(" ")
+    @word.gsub(/[\w]/, "_")
   end
 
   def save_state
