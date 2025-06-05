@@ -4,15 +4,16 @@ require_relative "display"
 
 # play a round of hangman
 class Game
+  attr_accessor :word, :redacted, :wrong_guesses, :all_guesses
+
   include Dictionary
   include Display
 
-  def initialize
-    @word = select_word
-    @secret_word = @word.split.join
-    @redacted = redact_word
-    @wrong_guesses = []
-    @all_guesses = []
+  def initialize(options = {})
+    @word = options["@word"] || select_word
+    @redacted = options["@redacted"] || redact_word
+    @wrong_guesses = options["@wrong_guesses"] || []
+    @all_guesses = options["@all_guesses"] || []
   end
 
   def play
@@ -27,7 +28,9 @@ class Game
   def input_guess
     choose_letter
     letter = gets.chomp.upcase
-    validate_input(letter)
+    validate_input(letter) unless letter == "SS"
+
+    save_state
   end
 
   def validate_input(letter)
@@ -70,7 +73,7 @@ class Game
     if word_guessed?
       player_wins
     elsif out_of_guesses?
-      gameover(@secret_word)
+      gameover(@word)
     end
   end
 
@@ -87,7 +90,19 @@ class Game
   end
 
   def redact_word
-    redacted = "_" * @secret_word.length
+    word = @word.split.join
+    redacted = "_" * word.length
     redacted.chars.join(" ")
+  end
+
+  def save_state
+    game_state = {}
+    instance_variables.map do |var|
+      game_state[var] = instance_variable_get(var)
+    end
+    File.open("game.json", "w+") do |f|
+      JSON.dump(game_state, f)
+    end
+    game_saved
   end
 end
